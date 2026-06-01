@@ -1,6 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GithubProvider from "next-auth/providers/github";
-import { prisma } from "../../../../lib/prisma";
+import { prisma } from "@/lib/prisma"; // ⚡ Absolute aliased path fix for Vercel
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -25,7 +25,7 @@ export const authOptions: NextAuthOptions = {
       }
       
       try {
-        // Safe database upsert matching the current 0 Elo database model definitions
+        // Safe database upsert matching the standard baseline chess ELO mechanics
         await prisma.user.upsert({
           where: { email: user.email },
           update: {
@@ -36,21 +36,22 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.name,
             avatarUrl: user.image,
-            githubId: user.id, // Stores cast string ID securely
-            humanElo: 0,       // Synchronized platform baseline floor
+            githubId: user.id, 
+            humanElo: 1200, // ⚡ Standardized chess baseline floor entry point
           },
         });
         return true;
       } catch (dbError) {
         console.error("NextAuth Prisma Engine transaction crash during signIn:", dbError);
-        return false; // Rejects authorization flow and appends ?error=AccessDenied
+        return false; 
       }
     },
     async jwt({ token, user }) {
-      if (user) {
+      // ⚡ LIVE SESSION SYNC: Fetching on token refresh prevents cached/stale botProfile states
+      if (token.email) {
         try {
           const databaseUserProfile = await prisma.user.findUnique({
-            where: { email: token.email! },
+            where: { email: token.email },
             include: { botProfile: true },
           });
           if (databaseUserProfile) {
@@ -73,7 +74,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/",
-    error: "/", // Gracefully redirects auth exceptions right back to your home card layout
+    error: "/", 
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
