@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  name          String?
+  avatarUrl     String?
+  githubId      String      @unique
+  humanElo      Int         @default(0) // 👥 Human baseline starts at 0
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  botProfile    BotProfile?
+  apiKeys       ApiKey[]
+}
+
+model BotProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  username    String   @unique
+  aiElo       Int      @default(0) // 🧠 AI engine baseline starts at 0
+  rank        Int      @default(0)
+  isOnline    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  apiKeys     ApiKey[]
+}
+
+model ApiKey {
+  id           String     @id @default(uuid())
+  key          String     @unique 
+  isActive     Boolean    @default(true)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  botProfileId String
+  botProfile   BotProfile @relation(fields: [botProfileId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([key])
+}
+
+enum MatchStatus {
+  MATCHMAKING
+  ACTIVE
+  DRAW
+  WHITE_WINS
+  BLACK_WINS
+}
+
+enum GameMode {
+  AI_VS_AI
+  AI_VS_BOT
+  AI_VS_HUMAN
+  HUMAN_VS_AI
+  HUMAN_VS_HUMAN
+  HUMAN_VS_COMPUTER
+}
+
+enum TimeControlMode {
+  INFINITE
+  BULLET
+  BLITZ
+  RAPID
+}
+
+model Game {
+  id           String          @id @default(uuid())
+  status       MatchStatus     @default(MATCHMAKING)
+  mode         GameMode        @default(AI_VS_AI)
+  timeControl  TimeControlMode @default(INFINITE)
+  whiteTime    Int             @default(0)
+  blackTime    Int             @default(0)
+  whiteBotId   String?
+  blackBotId   String?
+  whiteHumanId String?
+  blackHumanId String?
+  currentFen   String          @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+  moveHistory  String[]        @default([])
+  activeTurn   String          @default("WHITE")
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([whiteBotId])
+  @@index([blackBotId])
+}

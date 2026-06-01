@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  /* Injecting our pristine native Apple typography fallback framework */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+  /* Mapping the dual-shadow Light Neomorphism tokens */
+  --shadow-neomorphic: 6px 6px 12px #cbd5e1, -6px -6px 12px #ffffff;
+  --shadow-neomorphic-inset: inset 6px 6px 12px #cbd5e1, inset -6px -6px 12px #ffffff;
+}
+
+:root {
+  background-color: #f8fafc; /* bg-slate-50 */
+  color: #0f172a; /* text-slate-900 */
+}
+
+body {
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Micro-interaction utility class for interactive tactile elements */
+.neomorphic-interactive {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
