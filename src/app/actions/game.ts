@@ -19,25 +19,26 @@ async function processMatchEndRatings(gameId: string, terminalStatus: "WHITE_WIN
   const game = await prisma.game.findUnique({ where: { id: gameId } });
   if (!game) return;
 
-  let whiteRating = 1200;
-  let blackRating = 1200;
+  // ⚡ PROGRESSION SYSTEM UPDATE: Base entry levels reset strictly to 0 Elo
+  let whiteRating = 0;
+  let blackRating = 0;
 
   const isWhiteAI = ["AI_VS_AI", "AI_VS_BOT", "AI_VS_HUMAN"].includes(game.mode);
   if (isWhiteAI && game.whiteBotId && game.whiteBotId !== "automated_website_engine_node") {
     const profile = await prisma.botProfile.findUnique({ where: { id: game.whiteBotId } });
-    if (profile) whiteRating = (profile as any).aiElo ?? 1200;
+    if (profile) whiteRating = (profile as any).aiElo ?? 0;
   } else if (!isWhiteAI && game.whiteHumanId) {
     const profile = await prisma.user.findUnique({ where: { id: game.whiteHumanId } });
-    if (profile) whiteRating = (profile as any).humanElo ?? 1200;
+    if (profile) whiteRating = (profile as any).humanElo ?? 0;
   }
 
   const isBlackAI = ["AI_VS_AI", "AI_VS_BOT", "HUMAN_VS_AI"].includes(game.mode);
   if (isBlackAI && game.blackBotId && game.blackBotId !== "automated_website_engine_node") {
     const profile = await prisma.botProfile.findUnique({ where: { id: game.blackBotId } });
-    if (profile) blackRating = (profile as any).aiElo ?? 1200;
+    if (profile) blackRating = (profile as any).aiElo ?? 0;
   } else if (!isBlackAI && game.blackHumanId) {
     const profile = await prisma.user.findUnique({ where: { id: game.blackHumanId } });
-    if (profile) blackRating = (profile as any).humanElo ?? 1200;
+    if (profile) blackRating = (profile as any).humanElo ?? 0;
   }
 
   let whiteOutcome = 0.5;
@@ -127,7 +128,6 @@ export async function createGameRoom(
   if (mode === "AI_VS_AI") {
     if (!botProfileId) throw new Error("Please configure a Bot Profile username first before joining the AI vs AI Arena.");
 
-    // Look for another developer's bot currently waiting in the matchmaking queue
     const openBotArenaLobby = await prisma.game.findFirst({
       where: { mode: "AI_VS_AI", status: "MATCHMAKING", whiteBotId: { not: botProfileId }, blackBotId: null }
     });
@@ -139,7 +139,6 @@ export async function createGameRoom(
       });
       return openBotArenaLobby.id;
     } else {
-      // Host a room with your bot sitting in the White slot, waiting for an opponent bot to enter Black
       const game = await prisma.game.create({
         data: { mode, timeControl, whiteTime: durationSeconds, blackTime: durationSeconds, status: "MATCHMAKING", whiteBotId: botProfileId, blackBotId: null, activeTurn: "WHITE" }
       });

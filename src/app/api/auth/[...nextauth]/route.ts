@@ -2,11 +2,23 @@ import NextAuth, { NextAuthOptions } from "next-auth";
 import GithubProvider from "next-auth/providers/github";
 import { prisma } from "@/lib/prisma"; // ⚡ Absolute aliased path fix for Vercel
 
+// 🔍 DIAGNOSTIC LOG: Alert shown in Vercel logs if parameters fail to link at runtime
+if (!process.env.GITHUB_ID && !process.env.GITHUB_CLIENT_ID) {
+  console.warn("⚠️ NextAuth Configuration Alert: Neither GITHUB_ID nor GITHUB_CLIENT_ID was detected in your active runtime environment variables.");
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     GithubProvider({
-      clientId: process.env.GITHUB_ID || "",
-      clientSecret: process.env.GITHUB_SECRET || "",
+      // ⚡ DUAL ENVIRONMENT KEY FALLBACK: Safely reads regular OR explicit client key styles
+      clientId: process.env.GITHUB_ID || process.env.GITHUB_CLIENT_ID || "",
+      clientSecret: process.env.GITHUB_SECRET || process.env.GITHUB_CLIENT_SECRET || "",
+      // ⚡ SCOPE SECURITY UPGRADE: Forces access to check private emails, eliminating redirect-loops
+      authorization: {
+        params: {
+          scope: "read:user user:email",
+        },
+      },
       profile(profile) {
         return {
           id: profile.id.toString(),
@@ -25,7 +37,7 @@ export const authOptions: NextAuthOptions = {
       }
       
       try {
-        // Safe database upsert matching the standard baseline chess ELO mechanics
+        // Safe database upsert matching the new progressive level track
         await prisma.user.upsert({
           where: { email: user.email },
           update: {
@@ -37,7 +49,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             avatarUrl: user.image,
             githubId: user.id, 
-            humanElo: 1200, // ⚡ Standardized chess baseline floor entry point
+            humanElo: 0, // ⚡ Progression System Reset: Fresh accounts start explicitly at 0 Elo!
           },
         });
         return true;
@@ -47,7 +59,7 @@ export const authOptions: NextAuthOptions = {
       }
     },
     async jwt({ token, user }) {
-      // ⚡ LIVE SESSION SYNC: Fetching on token refresh prevents cached/stale botProfile states
+      // LIVE SESSION SYNC: Fetching on token refresh prevents cached/stale botProfile states
       if (token.email) {
         try {
           const databaseUserProfile = await prisma.user.findUnique({
